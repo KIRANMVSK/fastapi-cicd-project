@@ -96,6 +96,7 @@ jobs:
       
       - name: installing aws cli
         run: |
+          sudo apt update -y
           sudo apt install awscli -y
       # Authenticate with AWS
       - name: AWS authentication
