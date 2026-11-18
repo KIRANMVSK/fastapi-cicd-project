@@ -1,0 +1,146 @@
+name: complete basic cicd workflow
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  pull_request:
+    branches:
+      - main
+      - master
+
+  workflow_dispatch:
+
+env:
+  IMG_NAME: app-cicd
+  AWS_ACCESS_KEY_ID: AKIAYFDA4B4DRJI7VVBB
+  AWS_SECRET_ACCESS_KEY: 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
+  AWS_REGION: us-east-1
+  DOCKERHUB_ACCESS_TOKEN: dckr_pat_4bjKpkcxBgxWRT2UCKe462r4R5k
+  DOCKERHUB_USERNAME: mandapati1
+  ECR_REPO: app-cicd
+  ECR_URI: 560696397575.dkr.ecr.us-east-1.amazonaws.com
+  IMAGE_TAG: ${{ github.sha }}
+  HOST_PORT: 8000
+  CONTAINER_PORT: 8000
+
+jobs:
+
+  # JOB 1: BUILD AND PUSH IMAGE
+
+  building_image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
+      - name: Python Installation
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Test cases will be added later
+
+      - name: Docker installation
+        run: |
+          sudo apt update -y
+          sudo apt install docker.io -y
+
+      - name: Building image
+        run: |
+          docker build -t ${IMG_NAME}:${IMAGE_TAG} .
+
+      - name: AWS configuration
+        if: github.event_name != 'pull_request'
+        run: |
+          aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+          aws configure set region "$AWS_REGION"
+
+      - name: Login to ECR
+        if: github.event_name != 'pull_request'
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_URI"
+
+      - name: Push image to ECR
+        if: github.event_name != 'pull_request'
+        run: |
+          docker tag ${IMG_NAME}:${IMAGE_TAG} ${ECR_URI}/${ECR_REPO}:${IMAGE_TAG}
+
+          docker push ${ECR_URI}/${ECR_REPO}:${IMAGE_TAG}
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "$DOCKERHUB_ACCESS_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+      - name: Push image to Docker Hub
+        if: github.event_name != 'pull_request'
+        run: |
+          docker tag ${IMG_NAME}:${IMAGE_TAG} ${DOCKERHUB_USERNAME}/${IMG_NAME}:${IMAGE_TAG}
+
+          docker push ${DOCKERHUB_USERNAME}/${IMG_NAME}:${IMAGE_TAG}
+
+
+  # JOB 2: DEPLOY IMAGE ON EC2
+
+  ec2_stuff:
+    runs-on: [self-hosted]
+    needs: building_image
+    if: github.event_name != 'pull_request'
+
+    steps:
+      
+      - name: installing aws cli
+        run: |
+          sudo apt install awscli -y
+      # Authenticate with AWS
+      - name: AWS authentication
+        run: |
+          aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+          aws configure set region "$AWS_REGION"
+
+      # Authenticate Docker with ECR
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_URI"
+
+      # Pull image from ECR
+      - name: Pull image from ECR
+        run: |
+          docker pull ${ECR_URI}/${ECR_REPO}:${IMAGE_TAG}
+
+      # Run container on EC2
+      - name: Run application
+        run: |
+          docker rm -f app-cicd || true
+
+          docker run -dt \
+            --name app-cicd \
+            --restart unless-stopped \
+            -p ${HOST_PORT}:${CONTAINER_PORT} \
+            ${ECR_URI}/${ECR_REPO}:${IMAGE_TAG}
+
+        
+
+            
+
+
+
+              
+            
+
+
+
+      
+# $GITHUB_ENV is a special environment file provided by GitHub Actions.
+# When you write a variable into this file, GitHub Actions makes that variable available to
+#  subsequent steps in the same job.
+
+# GITHUB_SHA is a predefined GitHub Actions environment variable.
+# Whenever GitHub triggers a workflow because of a push or pull request, it provides
+#  information about the commit associated with that event.
