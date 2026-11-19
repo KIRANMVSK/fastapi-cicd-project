@@ -14,17 +14,18 @@ on:
   workflow_dispatch:
 
 env:
-  IMG_NAME: app-cicd
-  AWS_ACCESS_KEY_ID: AKI
-  AWS_SECRET_ACCESS_KEY: 8eWQGlT
-  AWS_REGION: us-east-1
-  DOCKERHUB_ACCESS_TOKEN: dckr_pat_4bjKpkcxBgxWRT2UCKe462r4R5k
-  DOCKERHUB_USERNAME: mandapati1
-  ECR_REPO: app-cicd
-  ECR_URI: 560696397575.dkr.ecr.us-east-1.amazonaws.com
+  IMG_NAME: ${{ secrets.IMG_NAME }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  ECR_REPO: ${{ secrets.ECR_REPO }}
+  ECR_URI: ${{ secrets.ECR_URI }}
   IMAGE_TAG: ${{ github.sha }}
-  HOST_PORT: 8000
-  CONTAINER_PORT: 8000
+  HOST_PORT: ${{ secrets.HOST_PORT }}
+  CONTAINER_PORT: ${{ secrets.CONTAINER_PORT }}
+
 
 jobs:
 
