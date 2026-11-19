@@ -42,7 +42,36 @@ jobs:
         with:
           python-version: '3.12'
 
-      # Test cases will be added later
+     # we can add test cases here
+     #here we using python so we need to run test cases 
+     #maven is automated build management tool of java
+     #so it can run test cases and verify code then after success , sonar plugin install we specifies in pom.xml
+     # then sonar scanner does it task
+
+     #for python alo we have build tool
+     #for now we using tets cases ---> pytest tool
+     #then we explicitly can install SonarScanner CLI
+     # we run our executable command given by the sonarqube for our project 
+     #we can use github actions builtin they downloads sonarscanner and runs them
+     
+      - name: Build and SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v8.3.0
+        with:
+          projectBaseDir: app            #telling in which dir we have the actual project
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarQube Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        with:
+          scanMetadataReportFile: app/.scannerwork/report-task.txt    #it contains the data collected by the sonar scanner
+          #it has our project details (project key name etc.., ) and the metrics collected against rules
+          pollingTimeoutSec: 600
+        timeout-minutes: 10
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
       - name: Docker installation
         run: |
